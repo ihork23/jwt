@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon --experimental-specifier-resolution=node index",
-    "build": "npm i",
+    "start": "node --experimental-specifier-resolution=node index",
+    "prod": "npm i & npm start",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

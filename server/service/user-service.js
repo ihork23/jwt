@@ -17,14 +17,7 @@ class UserService {
     const user = UserModel.create({ email, password: hashPassword, activationLink })
     await mailService.sendActivationMail(email, `${process.env.API_URL}/api/activate/${activationLink}`)
 
-    const userDto = new UserDto(user)
-    const tokens = tokenService.generateTokens({ ...userDto })
-    await tokenService.saveToken(userDto.id, tokens.refreshToken)
-
-    return {
-      ...tokens,
-      user: userDto
-    }
+    return this.#generateTokens(user)
   }
 
   async activate(activationLink) {
@@ -45,6 +38,34 @@ class UserService {
     if (!arePassesEqual) {
       throw ApiError.BadRequest('Password is wrong')
     }
+    return this.#generateTokens(user)
+  }
+
+  async logout(refreshToken) {
+    const token = await tokenService.removeToken(refreshToken)
+    return token
+  }
+
+  async refresh(refreshToken) {
+    if (!refreshToken) {
+      return ApiError.UnauthorisedError()
+    }
+    const userData = tokenService.validateRefreshToken(refreshToken)
+    const tokenFromDb = await tokenService.findToken(refreshToken)
+
+    if (!userData || !tokenFromDb) {
+      throw ApiError.UnauthorisedError()
+    }
+    const user = await UserModel.findById(userData.id)
+
+    return this.#generateTokens(user)
+  }
+
+  async getAllUsers() {
+    return await UserModel.find()
+  }
+
+  async #generateTokens(user) {
     const userDto = new UserDto(user)
     const tokens = tokenService.generateTokens({ ...userDto })
     await tokenService.saveToken(userDto.id, tokens.refreshToken)
@@ -53,11 +74,6 @@ class UserService {
       ...tokens,
       user: userDto
     }
-  }
-
-  async logout(refreshToken) {
-    const token = await tokenService.removeToken(refreshToken)
-    return token
   }
 }
 
